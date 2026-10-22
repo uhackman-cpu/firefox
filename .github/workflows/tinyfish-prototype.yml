@@ -20,8 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check out repository
+      - name: Check out prototype files only
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: automation/tinyfish
+          sparse-checkout-cone-mode: true
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
