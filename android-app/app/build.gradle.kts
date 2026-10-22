@@ -13,8 +13,8 @@ android {
         applicationId = "com.uhackman.tinyfish"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.6.0-gecko"
+        versionCode = 7
+        versionName = "0.7.0-gecko"
     }
 
     compileOptions {
@@ -39,5 +39,5 @@ configurations.configureEach {
 
 dependencies {
     // GeckoView embeds Mozilla's Gecko engine, also used in Firefox.
-    implementation("org.mozilla.geckoview:geckoview:157.0.20261005135250")
+    implementation("org.mozilla.geckoview:geckoview:156.0.20260921121718")
 }
