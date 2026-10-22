@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -10,19 +11,20 @@ android {
         applicationId = "com.uhackman.tinyfish"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0-gecko"
+        versionCode = 5
+        versionName = "0.5.0-gecko"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
 
-// The newest GeckoView metadata currently pulls AndroidX artifacts that ask
-// for an unpublished API 37 platform. Keep compatible 1.18/1.9 artifacts
-// while compiling against the available API 36 SDK.
 configurations.configureEach {
     resolutionStrategy.force(
         "androidx.core:core:1.18.0",
@@ -32,5 +34,6 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation("org.mozilla.geckoview:geckoview:158.0.20261019185856")
+    // GeckoView embeds Mozilla's Gecko engine, also used in Firefox.
+    implementation("org.mozilla.geckoview:geckoview:157.0.20261005135250")
 }
