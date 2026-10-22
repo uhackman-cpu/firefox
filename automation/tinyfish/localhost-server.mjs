@@ -1,9 +1,8 @@
 /**
  * Loopback HTTP adapter for the TinyFish-style automation prototype.
  *
- * Opt-in only: callers must instantiate and start the server explicitly.
- * Uses Node-compatible HTTP APIs for prototype tests; Firefox integration
- * should replace this transport with a reviewed Gecko-native component.
+ * This is a Node-compatible transport prototype, not a Gecko-native server.
+ * Firefox integration must replace this transport and pass security review.
  */
 import { createServer } from "node:http";
 import { GoalRunner, GoalState } from "./goal-runner.mjs";
@@ -42,28 +41,26 @@ async function readJson(req) {
   }
 }
 
-/**
- * Create an explicitly opt-in localhost API server.
- *
- * `adapter.executeStep` must be a separately reviewed browser integration.
- * This HTTP layer itself cannot inspect arbitrary sites or execute page JS.
- */
-export function createTinyfishServer({ adapter, port = 8900 } = {}) {
+export function createTinyfishServer({ adapter, port = 8900, authorize } = {}) {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) {
     throw new RangeError("port must be an integer between 1024 and 65535");
+  }
+  if (typeof authorize !== "function") {
+    throw new TypeError("An explicit local authorization callback is required");
   }
   const runner = new GoalRunner({ adapter });
   const server = createServer(async (req, res) => {
     try {
-      // Do not accept requests addressed to non-loopback hosts or browser
-      // origins; the API is for an explicit local controller only.
-      if (req.headers.host && !/^127\.0\.0\.1(?::\d+)?$/.test(req.headers.host)) {
+      const host = req.headers.host ?? "";
+      if (!new RegExp(`^127\\.0\\.0\\.1(?::${port})?$`).test(host)) {
         return send(res, 403, { error: "Loopback Host header required" });
       }
       const origin = req.headers.origin;
-      if (origin && origin !== "http://127.0.0.1" &&
-          origin !== `http://127.0.0.1:${port}`) {
+      if (origin && origin !== `http://127.0.0.1:${port}`) {
         return send(res, 403, { error: "Cross-origin requests are not allowed" });
+      }
+      if (!await authorize(req)) {
+        return send(res, 401, { error: "Local authorization required" });
       }
 
       const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
@@ -93,26 +90,30 @@ export function createTinyfishServer({ adapter, port = 8900 } = {}) {
             send(res, 404, { error: "Goal not found" });
         }
         if (req.method === "POST" && action === "cancel") {
-          return send(res, runner.cancel(id) ? 200 : 409, {
-            goal: runner.get(id),
-          });
+          const cancelled = runner.cancel(id);
+          const goal = runner.get(id);
+          return send(res, !goal ? 404 : cancelled ? 200 : 409, { goal });
         }
         if (req.method === "POST" && action === "confirm") {
+          const before = runner.get(id);
+          if (!before) return send(res, 404, { error: "Goal not found" });
+          if (before.state !== GoalState.WAITING_CONFIRMATION) {
+            return send(res, 409, { error: "Goal is not awaiting confirmation", goal: before });
+          }
           const body = await readJson(req);
           if (typeof body.approved !== "boolean") {
             return send(res, 400, { error: "approved must be boolean" });
           }
-          try {
-            return send(res, 200, { goal: runner.confirm(id, body.approved) });
-          } catch (error) {
-            return send(res, 409, { error: error.message });
-          }
+          return send(res, 200, { goal: runner.confirm(id, body.approved) });
         }
         if (req.method === "POST" && action === "tick") {
           const before = runner.get(id);
           if (!before) return send(res, 404, { error: "Goal not found" });
           if (before.state === GoalState.WAITING_CONFIRMATION) {
-            return send(res, 409, { error: "Goal awaits explicit confirmation", goal: before });
+            return send(res, 409, {
+              error: "Goal awaits explicit confirmation",
+              goal: before,
+            });
           }
           return send(res, 200, { goal: await runner.tick(id) });
         }
