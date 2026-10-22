@@ -4,27 +4,45 @@ This directory is the initial, isolated integration layer for goal-driven browse
 
 ## Status
 
-This is a starter implementation package, not yet wired into Firefox startup or built into a browser binary. It deliberately does not change existing browser behavior. The local controller must be explicitly enabled by the user before it is started.
+This is a prototype package, not yet wired into Firefox startup or built into a browser binary. The local controller starts only when explicitly launched by the user. The HTTP transport is Node.js-based and is not a Gecko-native Firefox service.
 
-## Design
+## Features in this branch
 
-- `goal-runner.mjs`: bounded, cancellable goal/task state machine and action-policy checks.
-- `localhost-server.mjs`: opt-in HTTP control server, loopback-only, strict routes and request validation.
-- `protocol.md`: proposed endpoints and JSON shapes.
-- `security.md`: threat model and required safeguards.
+- `goal-runner.mjs`: bounded, cancellable goal/task state machine and explicit confirmation states.
+- `localhost-server.mjs`: opt-in HTTP control server with strict routes, request limits, loopback checks, origin checks, and a required injected authorization callback.
+- `launch.mjs`: local prototype launcher; select a port with `TINYFISH_PORT` and provide a secret with `TINYFISH_TOKEN`.
+- `standalone-window/`: a temporary-loadable WebExtension prototype that moves the active tab into a minimal popup window when its toolbar button is clicked.
+- `protocol.md` and `security.md`: protocol and threat model.
+- `*.test.mjs`: Node test coverage for goal state and HTTP behavior.
 
-## Intended endpoints
+## Run the local API prototype
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/status` | Health and current task metadata |
-| GET | `/tabs` | Return a minimal tab summary, excluding private-window tabs by default |
-| POST | `/goal` | Validate and enqueue a user-specified goal |
-| POST | `/goal/:id/cancel` | Cancel a running goal |
-| GET | `/goal/:id` | Read goal status and sanitized result |
+Requires Node.js 22 or later:
 
-This package is intentionally narrower than the supplied Gemini Autonomous Browser interface. It does not expose arbitrary page JavaScript evaluation, arbitrary GitHub commits, token storage, file deletion, or unrestricted network navigation.
+```sh
+TINYFISH_PORT=8900 TINYFISH_TOKEN="$(openssl rand -hex 32)" node automation/tinyfish/launch.mjs
+```
 
-## Development and integration
+The port can be changed to any available TCP port from 1024 through 65535, for example `TINYFISH_PORT=8795`. The service binds only to `127.0.0.1`; it does not bind to LAN interfaces. Requests must include `Authorization: Bearer <TINYFISH_TOKEN>`.
 
-Do not import this module from production startup until the Firefox platform/security review has approved its lifecycle, permission prompts, localization, and test coverage. Run tests with the repository's supported JavaScript test harness after integration into a registered test manifest. The GitHub file API can store code, but cannot perform a full Firefox build or verify browser runtime behavior by itself.
+**Important:** this prototype's goal adapter deliberately reports that no Firefox adapter is installed. It can demonstrate task lifecycle and transport behavior but cannot yet control page tabs or execute browser actions.
+
+## Try the standalone window extension
+
+1. Open `about:debugging#/runtime/this-firefox` in Firefox Desktop.
+2. Choose **Load Temporary Add-on…** and select `standalone-window/manifest.json`.
+3. Select a tab and click the extension toolbar button to move it into a popup window.
+
+## Tests
+
+Run:
+
+```sh
+node --test automation/tinyfish/*.test.mjs
+```
+
+A GitHub Actions workflow runs these prototype tests on relevant pull requests and pushes.
+
+## Remaining integration work
+
+This is not a full Firefox build and is not integrated into Firefox startup. A Gecko-native transport, reviewed browser actor/adapter, visible permission/consent UI, test manifest registration, localization, security review, and actual Firefox build remain necessary. The extension is a prototype and has not been packaged, signed, or tested against a built browser binary.
