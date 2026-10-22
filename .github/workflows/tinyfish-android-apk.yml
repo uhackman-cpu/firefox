@@ -1,0 +1,38 @@
+name: TinyFish Android APK
+on:
+  push:
+    branches: ["automation/tinyfish-goal-api"]
+    paths: ["android-app/**", ".github/workflows/tinyfish-android-apk.yml"]
+  pull_request:
+    paths: ["android-app/**", ".github/workflows/tinyfish-android-apk.yml"]
+permissions:
+  contents: read
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            android-app/
+            .github/workflows/
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+      - name: Build GeckoView debug APK
+        working-directory: android-app
+        run: gradle --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tinyfish-geckoview-debug-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

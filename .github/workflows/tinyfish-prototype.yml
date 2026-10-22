@@ -1,0 +1,47 @@
+name: TinyFish automation prototype tests
+
+on:
+  pull_request:
+    paths:
+      - "automation/tinyfish/**"
+      - ".github/workflows/tinyfish-prototype.yml"
+  push:
+    branches:
+      - "automation/tinyfish-goal-api"
+    paths:
+      - "automation/tinyfish/**"
+      - ".github/workflows/tinyfish-prototype.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prototype-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out prototype files only
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: automation/tinyfish
+          sparse-checkout-cone-mode: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate extension manifest
+        run: node -e "JSON.parse(require('node:fs').readFileSync('automation/tinyfish/standalone-window/manifest.json', 'utf8'))"
+      - name: Run prototype tests
+        run: node --test automation/tinyfish/*.test.mjs
+      - name: Package standalone-window extension
+        run: |
+          cd automation/tinyfish/standalone-window
+          zip -r "$GITHUB_WORKSPACE/tinyfish-standalone-window.zip" .
+      - name: Upload extension package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinyfish-standalone-window
+          path: tinyfish-standalone-window.zip
+          if-no-files-found: error
