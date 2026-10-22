@@ -31,5 +31,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Validate extension manifest
+        run: node -e "JSON.parse(require('node:fs').readFileSync('automation/tinyfish/standalone-window/manifest.json', 'utf8'))"
       - name: Run prototype tests
         run: node --test automation/tinyfish/*.test.mjs
+      - name: Package standalone-window extension
+        run: |
+          cd automation/tinyfish
+          zip -r "$GITHUB_WORKSPACE/tinyfish-standalone-window.zip" standalone-window
+      - name: Upload extension package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinyfish-standalone-window
+          path: tinyfish-standalone-window.zip
+          if-no-files-found: error
