@@ -13,6 +13,11 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            android-app/
+            .github/workflows/
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
