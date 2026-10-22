@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,17 +13,19 @@ android {
         applicationId = "com.uhackman.tinyfish"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0-gecko"
+        versionCode = 6
+        versionName = "0.6.0-gecko"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
-    kotlinOptions {
-        jvmTarget = "17"
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
